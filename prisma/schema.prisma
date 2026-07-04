@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+  VIEWER
+  ACCOUNT_MANAGER
+}
+
+enum CustomerStatus {
+  ACTIVE
+  ONBOARDING
+  INACTIVE
+  ARCHIVED
+}
+
+enum HardwareStatus {
+  ACTIVE
+  SPARE
+  RETIRED
+  MISSING
+  WARRANTY_REPAIR
+}
+
+enum FileKind {
+  PDF
+  IMAGE
+  DOCUMENT
+  SPREADSHEET
+  DIAGRAM
+  OTHER
+}
+
+enum AlertStatus {
+  ACTIVE
+  SNOOZED
+  DISMISSED
+}
+
+model User {
+  id              String               @id @default(cuid())
+  name            String
+  email           String               @unique
+  passwordHash    String
+  role            UserRole             @default(TECHNICIAN)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  customerAccess  CustomerUserAccess[]
+  uploadedFiles   FileAsset[]          @relation("UploadedFiles")
+  activityEvents  ActivityEvent[]
+}
+
+model Customer {
+  id                       String                       @id @default(cuid())
+  name                     String
+  legalName                String?
+  category                 String                       @default("Managed")
+  status                   CustomerStatus               @default(ACTIVE)
+  primaryContactName       String?
+  mainPhone                String?
+  mainEmail                String?
+  website                  String?
+  accountManager           String?
+  primaryTechnician        String?
+  notes                    String?
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
+  locations                Location[]
+  contacts                 CustomerContact[]
+  hardwareAssets           HardwareAsset[]
+  internetServices         InternetService[]
+  serviceContracts         ServiceContract[]
+  folders                  Folder[]
+  files                    FileAsset[]
+  documentationPages       DocumentationPage[]
+  networkRecords           NetworkRecord[]
+  softwareLicenses         SoftwareLicense[]
+  customerAccess           CustomerUserAccess[]
+  documentationCompletions DocumentationCompletionItem[]
+  activityEvents           ActivityEvent[]
+}
+
+model CustomerUserAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  customerId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, customerId])
+}
+
+model Location {
+  id               String            @id @default(cuid())
+  customerId       String
+  name             String
+  address          String?
+  phone            String?
+  timeZone         String?
+  siteContact      String?
+  notes            String?
+  customer         Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  hardwareAssets   HardwareAsset[]
+  internetServices InternetService[]
+  networkRecords   NetworkRecord[]
+}
+
+model CustomerContact {
+  id         String   @id @default(cuid())
+  customerId String
+  name       String
+  title      String?
+  email      String?
+  phone      String?
+  mobile     String?
+  department String?
+  type       String?
+  notes      String?
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model HardwareAssetType {
+  id                               String          @id @default(cuid())
+  name                             String          @unique
+  defaultReplacementIntervalMonths Int?
+  assets                           HardwareAsset[]
+}
+
+model HardwareAsset {
+  id                         String            @id @default(cuid())
+  customerId                 String
+  locationId                 String?
+  assetTypeId                String?
+  name                       String
+  manufacturer               String?
+  model                      String?
+  serialNumber               String?
+  assetTag                   String?
+  status                     HardwareStatus    @default(ACTIVE)
+  installedDate              DateTime?
+  purchaseDate               DateTime?
+  warrantyExpirationDate     DateTime?
+  replacementIntervalMonths  Int?
+  recommendedReplacementDate DateTime?
+  vendor                     String?
+  notes                      String?
+  customFields               Json?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  customer                   Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location                   Location?         @relation(fields: [locationId], references: [id])
+  assetType                  HardwareAssetType? @relation(fields: [assetTypeId], references: [id])
+  files                      FileAsset[]
+}
+
+model InternetService {
+  id               String    @id @default(cuid())
+  customerId       String
+  locationId       String?
+  provider         String
+  serviceType      String
+  circuitId        String?
+  accountNumber    String?
+  publicStaticIps  String?
+  speed            String?
+  monthlyCostCents Int?
+  contractStart    DateTime?
+  contractEnd      DateTime?
+  renewalNotice    DateTime?
+  supportPhone     String?
+  supportPortalUrl String?
+  notes            String?
+  customer         Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location         Location? @relation(fields: [locationId], references: [id])
+  files            FileAsset[]
+}
+
+model ServiceContract {
+  id                         String      @id @default(cuid())
+  customerId                 String
+  name                       String
+  vendor                     String?
+  contractType               String?
+  startDate                  DateTime?
+  endDate                    DateTime?
+  renewalDate                DateTime?
+  cancellationNoticeDeadline DateTime?
+  costCents                  Int?
+  billingFrequency           String?
+  status                     String      @default("active")
+  internalOwner              String?
+  notes                      String?
+  customer                   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  files                      FileAsset[]
+}
+
+model Vendor {
+  id               String  @id @default(cuid())
+  name             String
+  serviceCategory  String?
+  accountNumber    String?
+  supportPhone     String?
+  supportEmail     String?
+  supportPortalUrl String?
+  notes            String?
+}
+
+model NetworkRecord {
+  id                  String    @id @default(cuid())
+  customerId          String
+  locationId          String?
+  name                String
+  vlanId              Int?
+  subnetCidr          String?
+  gateway             String?
+  dhcpRange           String?
+  dnsServers          String?
+  staticIpAssignments Json?
+  ssids               String?
+  notes               String?
+  customer            Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  location            Location? @relation(fields: [locationId], references: [id])
+  files               FileAsset[]
+}
+
+model SoftwareLicense {
+  id             String    @id @default(cuid())
+  customerId     String
+  productName    String
+  vendor         String?
+  licenseCount   Int?
+  renewalDate    DateTime?
+  costCents      Int?
+  adminPortalUrl String?
+  notes          String?
+  customer       Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Folder {
+  id         String     @id @default(cuid())
+  customerId String?
+  parentId   String?
+  name       String
+  path       String
+  customer   Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  parent     Folder?    @relation("FolderTree", fields: [parentId], references: [id])
+  children   Folder[]   @relation("FolderTree")
+  files      FileAsset[]
+  pages      DocumentationPage[]
+}
+
+model FileAsset {
+  id                String           @id @default(cuid())
+  customerId        String
+  folderId          String?
+  hardwareAssetId   String?
+  internetServiceId String?
+  serviceContractId String?
+  networkRecordId   String?
+  uploadedById      String?
+  title             String
+  originalFilename  String
+  storageKey        String
+  mimeType          String
+  kind              FileKind         @default(OTHER)
+  sizeBytes         Int
+  currentVersion    Int              @default(1)
+  description       String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  customer          Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  folder            Folder?          @relation(fields: [folderId], references: [id])
+  hardwareAsset     HardwareAsset?   @relation(fields: [hardwareAssetId], references: [id])
+  internetService   InternetService? @relation(fields: [internetServiceId], references: [id])
+  serviceContract   ServiceContract? @relation(fields: [serviceContractId], references: [id])
+  networkRecord     NetworkRecord?   @relation(fields: [networkRecordId], references: [id])
+  uploadedBy        User?            @relation("UploadedFiles", fields: [uploadedById], references: [id])
+  versions          FileVersion[]
+}
+
+model FileVersion {
+  id               String    @id @default(cuid())
+  fileAssetId      String
+  version          Int
+  originalFilename String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  uploadedAt       DateTime  @default(now())
+  fileAsset        FileAsset @relation(fields: [fileAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([fileAssetId, version])
+}
+
+model DocumentationPage {
+  id          String                     @id @default(cuid())
+  customerId  String
+  folderId    String?
+  title       String
+  body        String
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  customer    Customer                   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  folder      Folder?                    @relation(fields: [folderId], references: [id])
+  versions    DocumentationPageVersion[]
+}
+
+model DocumentationPageVersion {
+  id                  String            @id @default(cuid())
+  documentationPageId String
+  version             Int
+  title               String
+  body                String
+  createdAt           DateTime          @default(now())
+  documentationPage   DocumentationPage @relation(fields: [documentationPageId], references: [id], onDelete: Cascade)
+
+  @@unique([documentationPageId, version])
+}
+
+model DocumentationRequirement {
+  id          String                       @id @default(cuid())
+  key         String                       @unique
+  label       String
+  description String?
+  required    Boolean                      @default(true)
+  completions DocumentationCompletionItem[]
+}
+
+model DocumentationCompletionItem {
+  id            String                   @id @default(cuid())
+  customerId    String
+  requirementId String
+  completed     Boolean                  @default(false)
+  completedAt   DateTime?
+  notes         String?
+  customer      Customer                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  requirement   DocumentationRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, requirementId])
+}
+
+model DashboardAlert {
+  id           String      @id @default(cuid())
+  customerId   String?
+  title        String
+  description  String?
+  severity     String      @default("warning")
+  status       AlertStatus @default(ACTIVE)
+  snoozedUntil DateTime?
+  sourceType   String?
+  sourceId     String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model ActivityEvent {
+  id         String    @id @default(cuid())
+  userId     String?
+  customerId String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
+  user       User?     @relation(fields: [userId], references: [id])
+  customer   Customer? @relation(fields: [customerId], references: [id])
+}
+

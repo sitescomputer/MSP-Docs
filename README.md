@@ -1,8 +1,56 @@
 # MSP Docs
 
-MSP Docs is a planned self-hosted documentation platform for managed service providers. It is designed for one MSP organization per installation, managing many customer environments from a single internal operations console.
+MSP Docs is a self-hosted documentation platform for managed service providers. It is designed for one MSP organization per installation, managing many customer environments from a single internal operations console.
 
-The project is currently in the planning stage. The detailed implementation brief lives in [AGENTS.md](./AGENTS.md).
+The project is in early implementation. The detailed implementation brief lives in [AGENTS.md](./AGENTS.md).
+
+## Current Status
+
+The repository currently includes:
+
+- A Next.js/TypeScript app shell.
+- A dark operations-console dashboard UI.
+- Demo data for customers, hardware, contracts, internet services, documentation pages, and files.
+- Hardware lifecycle and documentation completeness calculation utilities.
+- Focused tests for lifecycle and completeness rules.
+- A Prisma schema for the planned PostgreSQL data model.
+- Docker Compose and Windows Server deployment notes.
+
+Real authentication, database-backed CRUD, file uploads, and rich text editing are planned next steps.
+
+## Local Development
+
+Install dependencies:
+
+```powershell
+npm.cmd install
+```
+
+Generate the Prisma client:
+
+```powershell
+npm.cmd run prisma:generate
+```
+
+Start the development server:
+
+```powershell
+npm.cmd run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+Run verification:
+
+```powershell
+npm.cmd run lint
+npm.cmd test
+npm.cmd run build
+```
 
 ## Goals
 

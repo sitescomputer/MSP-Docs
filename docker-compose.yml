@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: msp_docs
+      POSTGRES_USER: msp_docs
+      POSTGRES_PASSWORD: msp_docs_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://msp_docs:msp_docs_password@db:5432/msp_docs?schema=public
+      AUTH_SECRET: replace-with-a-long-random-secret
+      AUTH_URL: http://localhost:3000
+      APP_NAME: MSP Docs
+      APP_URL: http://localhost:3000
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_BYTES: "26214400"
+      DUE_SOON_DAYS: "90"
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+  uploads:
+
